@@ -14,7 +14,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # -----------------------------------
 # 문제 파싱 로직 (줄바꿈 없어도 동작)
 # -----------------------------------
-
 def load_questions_from_docx(path: str):
     """Word(.docx) 파일 안의 텍스트에서 문제‑보기 세트를 파싱한다.
     ‑ 줄바꿈이 없더라도 문제 번호(1. 2. …)와 보기 번호(①~⑤) 패턴으로 분리
@@ -51,13 +50,13 @@ def load_questions_from_docx(path: str):
 # -----------------------------------
 # GPT 호출 함수
 # -----------------------------------
-
 def ask_gpt(question: str, choice_key: str, choice_text: str):
     prompt = (
         "다음은 공인노무사 기출 객관식 문제이다.\n"
         f"문제: {question}\n"
         f"선택한 보기: {choice_key}. {choice_text}\n\n"
-        "선택이 맞으면 \"당신의 답: O\" 형태로, 틀리면 \"당신의 답: X\" 형태로 시작하고, 이어서 정답(숫자형 예: ③)과 간단한 해설을 제시하라." )
+        "선택이 맞으면 \"당신의 답: O\" 형태로, 틀리면 \"당신의 답: X\" 형태로 시작하고, 이어서 정답(숫자형 예: ③)과 간단한 해설을 제시하라."
+    )
 
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -72,15 +71,15 @@ def ask_gpt(question: str, choice_key: str, choice_text: str):
 # -----------------------------------
 # Streamlit UI
 # -----------------------------------
-
 def main():
     st.set_page_config(page_title="노무사 기출 퀴즈", page_icon="📚", layout="wide")
     st.title("📚 공인노무사 기출문제 퀴즈 with GPT")
 
-    base = os.path.join(os.path.expanduser("~"), "Desktop", "노무사 학습", "노무사 기출문제")
+    # 상대경로 기준 data 폴더로 변경
+    base = os.path.join(os.path.dirname(__file__), "data")
     files = [f for f in os.listdir(base) if f.endswith(".docx")]
     if not files:
-        st.error("워드(.docx) 파일이 없습니다. 폴더를 확인하세요.")
+        st.error("워드(.docx) 파일이 없습니다. data 폴더를 확인하세요.")
         return
 
     file_sel = st.selectbox("문제 파일 선택", files)
@@ -90,14 +89,12 @@ def main():
         st.error("문제/보기 형식을 인식할 수 없습니다. 워드 파일을 확인하세요.")
         return
 
-    # 문제 번호 입력 (1~N)
     q_num = st.number_input("문제 번호", min_value=1, max_value=len(qs), step=1)
     prob = qs[q_num - 1]
 
     st.markdown(f"#### 문제 {q_num}")
     st.write(prob["question"])
 
-    # 라디오 버튼으로 보기 선택
     choice_key = st.radio("선택지", list(prob["choices"].keys()), format_func=lambda k: f"{k}. {prob['choices'][k]}")
 
     if st.button("정답 확인 및 해설"):
