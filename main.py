@@ -24,10 +24,10 @@ def bing_search(query: str, top_n: int = 3):
         st.error("오류: BING_API_KEY가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
         return []
 
-    # HTTP 404 오류가 계속 발생하는 가장 유력한 원인은
-    # Azure Portal의 '엔드포인트' 값이 이미 완전한 API 호출 URL일 가능성입니다.
-    # 따라서 BING_ENDPOINT 뒤에 추가 경로를 붙이지 않고 바로 사용합니다.
-    url = BING_ENDPOINT # 현재 엔드포인트를 직접 사용하도록 설정
+    # JSON 파싱 오류는 서버 응답이 유효한 JSON이 아닐 때 발생합니다.
+    # 이는 주로 URL 경로가 잘못되었거나, API 키 문제로 인해 유효하지 않은 응답이 올 때 발생합니다.
+    # Azure Portal 엔드포인트 뒤에 가장 일반적인 Bing Web Search API v7 경로인 '/v7.0/search'를 붙여 시도합니다.
+    url = f"{BING_ENDPOINT.rstrip('/')}/v7.0/search" # <-- 이 부분을 다시 수정했습니다.
     
     # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
     # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
@@ -46,6 +46,7 @@ def bing_search(query: str, top_n: int = 3):
         except json.JSONDecodeError as e:
             st.error(f"JSON 파싱 오류: {e}. 서버 응답이 유효한 JSON이 아닙니다.")
             # 서버가 보낸 원본 응답 텍스트를 출력하여 확인합니다.
+            # 이 텍스트가 비어있거나, HTML 오류 페이지라면 문제의 원인을 파악하는 데 결정적입니다.
             print(f"Raw API Response Text (JSON Decode Error): {resp.text}")
             return []
             
