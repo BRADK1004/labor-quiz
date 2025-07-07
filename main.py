@@ -26,8 +26,12 @@ def bing_search(query: str, top_n: int = 3):
 
     # HTTP 404 오류는 주로 URL 경로 문제로 발생합니다.
     # Azure Bing Search 리소스의 경우, 엔드포인트 뒤에 '/v7.0/search'만 붙는 경우가 많습니다.
-    # 기존 'bing/v7.0/search'에서 '/bing'을 제거하여 시도해봅니다.
-    url = f"{BING_ENDPOINT}/v7.0/search" # <-- 이 부분을 수정했습니다.
+    # 이전에 '/bing'을 제거하는 수정을 했으며, 이 버전이 Azure Bing Search의 일반적인 경로입니다.
+    url = f"{BING_ENDPOINT}/v7.0/search"
+    
+    # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
+    # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
+    print(f"Bing Search API 요청 URL: {url}")
     
     headers = {"Ocp-Apim-Subscription-Key": BING_API_KEY}
     params  = {"q": query, "count": top_n, "textFormat": "Raw"}
@@ -47,6 +51,8 @@ def bing_search(query: str, top_n: int = 3):
         ]
     except requests.exceptions.HTTPError as e:
         st.error(f"HTTP 오류 발생: {e.response.status_code} - {e.response.text}")
+        # 추가 디버깅 정보: 응답 본문을 출력하여 서버가 제공하는 자세한 오류 내용을 확인합니다.
+        print(f"HTTP Error Response Body: {e.response.text}")
         return []
     except requests.exceptions.ConnectionError as e:
         st.error(f"네트워크 연결 오류: Bing API 서버에 연결할 수 없습니다. 엔드포인트나 인터넷 연결을 확인해주세요. ({e})")
