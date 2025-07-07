@@ -1,110 +1,58 @@
 import streamlit as st
-import os
-import re
-import requests
+import os, re, json, requests, tempfile
 from docx import Document
-import json # json 모듈을 임포트합니다.
 
 # ────────────────────────────────
-# Azure Bing Search API 키 및 엔드포인트 (Secrets에 등록)
-# Streamlit Secrets에서 API 키를 가져옵니다.
-# 로컬 개발 시 .streamlit/secrets.toml 파일에 BING_API_KEY = "YOUR_API_KEY" 형식으로 저장해야 합니다.
-BING_API_KEY = os.getenv("BING_API_KEY")
-
-# Bing Search API 엔드포인트를 설정합니다.
-# 사용자님의 리소스 API Kind가 'CognitiveServices'이므로,
-# 이 엔드포인트는 통합 서비스의 기본 엔드포인트입니다.
-# Bing Search API 호출을 위해서는 뒤에 특정 경로를 추가해야 합니다.
-BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://bing-search-labor.cognitiveservices.azure.com")
+# 환경 변수 / secrets
+BING_API_KEY  = st.secrets.get("BING_API_KEY",  os.getenv("BING_API_KEY"))
+BING_ENDPOINT = st.secrets.get("BING_ENDPOINT", os.getenv("BING_ENDPOINT",
+                    "https://bing-search-labor.cognitiveservices.azure.com"))
 
 # ────────────────────────────────
-# Bing 검색 함수 (최대 top_n개 결과 반환)
-def bing_search(query: str, top_n: int = 3):
+def bing_search(query: str, top_n: int = 3) -> list[dict]:
     if not BING_API_KEY:
-        st.error("오류: BING_API_KEY가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
-        # BING_API_KEY가 로드되지 않았을 경우 로그에 출력하여 확인합니다.
-        print("BING_API_KEY is None. Please check your Streamlit Secrets or environment variables.")
+        st.error("BING_API_KEY가 없습니다. .streamlit/secrets.toml 또는 환경변수를 확인하세요.")
         return []
-    else:
-        # BING_API_KEY가 로드되었음을 로그에 출력합니다. (보안을 위해 일부만 표시)
-        print(f"BING_API_KEY is loaded (first 5 chars): {BING_API_KEY[:5]}*****")
 
-
-    # API Kind가 'CognitiveServices'인 경우, Bing Search API의 표준 경로는
-    # 기본 엔드포인트 뒤에 '/bing/v7.0/search'를 붙이는 형태입니다.
-    # rstrip('/')을 사용하여 엔드포인트 끝의 슬래시 중복을 방지합니다.
-    url = f"{BING_ENDPOINT.rstrip('/')}/bing/v7.0/search" # <-- 이 부분을 다시 수정했습니다.
-    
-    # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
-    # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
-    print(f"Bing Search API 요청 URL: {url}")
-    
+    url = f"{BING_ENDPOINT.rstrip('/')}/bing/v7.0/search"
     headers = {"Ocp-Apim-Subscription-Key": BING_API_KEY}
     params  = {"q": query, "count": top_n, "textFormat": "Raw"}
 
     try:
         resp = requests.get(url, headers=headers, params=params, timeout=10)
-        resp.raise_for_status() # HTTP 에러 발생 시 예외를 발생시킵니다.
-
-        # JSONDecodeError를 명시적으로 처리하기 위해 try-except 블록 추가
-        try:
-            data = resp.json().get("webPages", {}).get("value", [])
-        except json.JSONDecodeError as e:
-            st.error(f"JSON 파싱 오류: {e}. 서버 응답이 유효한 JSON이 아닙니다.")
-            # 서버가 보낸 원본 응답 텍스트를 콘솔에 출력합니다.
-            print(f"Raw API Response Text (JSON Decode Error): {resp.text}")
+        if resp.status_code != 200:      # 200이 아니면 상세 메시지 출력 후 종료
+            st.error(f"Bing API 오류 {resp.status_code}: {resp.text}")
             return []
-            
-        return [
-            {
-                "name": item["name"],
-                "url": item["url"],
-                "snippet": item.get("snippet", "")
-            }
-            for item in data
-        ]
-    except requests.exceptions.HTTPError as e:
-        st.error(f"HTTP 오류 발생: {e.response.status_code} - {e.response.text}")
-        # 응답 본문을 콘솔에 출력합니다.
-        print(f"HTTP Error Response Body: {e.response.text}")
-        return []
-    except requests.exceptions.ConnectionError as e:
-        st.error(f"네트워크 연결 오류: Bing API 서버에 연결할 수 없습니다. 엔드포인트나 인터넷 연결을 확인해주세요. ({e})")
-        return []
-    except requests.exceptions.Timeout:
-        st.error("요청 시간 초과: Bing API 응답이 너무 오래 걸립니다. 다시 시도해주세요.")
-        return []
-    except requests.exceptions.RequestException as e:
-        st.error(f"요청 중 알 수 없는 오류 발생: {e}")
-        # RequestException 발생 시에도 응답 텍스트를 콘솔에 출력합니다.
-        if resp: # resp 객체가 존재할 경우에만 text 속성에 접근
-            print(f"Raw API Response Text (Request Exception): {resp.text}")
-        return []
+        data = resp.json().get("webPages", {}).get("value", [])
+        return [{"name": d["name"], "url": d["url"], "snippet": d.get("snippet", "")}
+                for d in data]
+    except (requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout) as e:
+        st.error(f"네트워크 오류: {e}")
     except Exception as e:
-        st.error(f"Bing 검색 중 예기치 않은 오류 발생: {e}")
-        return []
+        st.error(f"예기치 못한 오류: {e}")
+    return []
 
 # ────────────────────────────────
-# Word(.docx) → 문제·보기 파싱 정규식
-CHOICE_REGEX = r"([\u2460-\u2464])"  # ①②③④⑤
+CHOICE_REGEX = r"([\u2460-\u2464])"     # ①②③④⑤
 
 def load_questions_from_docx(path: str):
-    doc = Document(path)
-    text = " ".join([p.text.strip() for p in doc.paragraphs if p.text.strip()])
-    start_idx = [(m.start(), m.group()) for m in re.finditer(r"(\d+)\. ", text)]
-    start_idx.append((len(text), None))
+    doc   = Document(path)
+    text  = " ".join(p.text.strip() for p in doc.paragraphs if p.text.strip())
+    idxs  = [(m.start(), m.group()) for m in re.finditer(r"\d+\.\s*", text)]
+    idxs.append((len(text), None))
 
     questions = []
-    for i in range(len(start_idx) - 1):
-        begin, _ = start_idx[i]
-        end, _ = start_idx[i + 1]
-        segment = text[begin:end].strip()
+    for i in range(len(idxs) - 1):
+        start, _ = idxs[i]
+        end,  _  = idxs[i+1]
+        segment  = text[start:end].strip()
 
         parts = re.split(CHOICE_REGEX, segment)
-        if len(parts) < 3:
+        if len(parts) < 3:          # 보기 부족
             continue
-        q_body = parts[0].split(". ", 1)[-1].strip()
-        raw_choices = [parts[j] + parts[j + 1] for j in range(1, len(parts) - 1, 2)]
+        q_body     = parts[0].split(".", 1)[-1].strip()
+        raw_choices = [parts[j] + parts[j+1] for j in range(1, len(parts)-1, 2)]
         if len(raw_choices) < 5:
             continue
         choices = {c[0]: c[1:].strip() for c in raw_choices[:5]}
@@ -112,53 +60,53 @@ def load_questions_from_docx(path: str):
     return questions
 
 # ────────────────────────────────
-# Streamlit UI
-
 def main():
     st.set_page_config(page_title="노무사 기출 (Bing)", page_icon="🧠")
     st.title("🧠 공인노무사 기출문제 퀴즈 (Bing AI 검색)")
 
-    up_file = st.file_uploader("Word .docx 기출 파일 업로드", type="docx")
-    if not up_file:
-        st.info("먼저 Word 파일을 올려 주세요")
+    up_file = st.file_uploader("Word (.docx) 기출 파일 업로드", type="docx")
+    if up_file is None:
+        st.info("먼저 Word 파일을 올려 주세요.")
         return
 
-    # 업로드된 파일을 임시 파일로 저장
-    temp_file_path = "temp.docx"
-    with open(temp_file_path, "wb") as f:
-        f.write(up_file.read())
+    # 업로드 파일을 임시 위치에 저장
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+        tmp.write(up_file.read())
+        temp_path = tmp.name
 
-    questions = load_questions_from_docx(temp_file_path)
+    try:
+        questions = load_questions_from_docx(temp_path)
+    finally:
+        os.remove(temp_path)        # 파일 정리
+
     if not questions:
-        st.error("문제 형식을 파싱하지 못했습니다. 문제 형식이 '숫자. 문제 내용 ① 보기 내용 ② 보기 내용...'과 같은지 확인해주세요.")
+        st.error("문제 파싱 실패: ‘숫자. 문제 ①보기…’ 형식인지 확인하세요.")
         return
 
-    idx = st.number_input("문제 번호", 1, len(questions), 1)
-    q = questions[idx - 1]
+    idx = st.number_input("문제 번호", 1, len(questions), 1, key="idx")
+    q   = questions[idx-1]
 
     st.subheader(f"문제 {idx}")
-    st.write(q["question"])
+    st.markdown(q["question"])
 
     sel = st.radio(
         "보기 선택",
         list(q["choices"].keys()),
-        format_func=lambda k: f"{k}. {q['choices'][k]}"
+        format_func=lambda k: f"{k}. {q['choices'][k]}",
+        key="sel",
     )
 
     if st.button("검색 결과 보기"):
         with st.spinner("Bing 검색 중..."):
-            # 검색 쿼리에 문제 내용과 '정답 해설'을 포함하여 검색합니다.
-            result_list = bing_search(f"{q['question']} 정답 해설")
-        
-        if not result_list:
-            st.warning("검색 결과가 없거나 API 키/엔드포인트 설정 문제일 수 있습니다. 위에 표시된 오류 메시지를 확인해주세요.")
+            results = bing_search(f"{q['question']} 정답 해설")
+
+        if not results:
+            st.warning("검색 결과가 없거나 API 문제일 수 있습니다. 로그를 확인하세요.")
         else:
-            st.markdown("---")
             st.caption("🔎 상위 검색 결과")
-            for r in result_list:
+            for r in results:
                 st.markdown(f"- [{r['name']}]({r['url']})  \n  {r['snippet']}")
-            st.markdown("---")
-            st.info("원문 해설은 링크를 참고하여 확인하세요.")
+            st.info("자세한 해설은 링크를 참고하세요.")
 
 if __name__ == "__main__":
     main()
