@@ -11,7 +11,7 @@ from docx import Document
 BING_API_KEY = os.getenv("BING_API_KEY")
 RAW_ENDPOINT = os.getenv("BING_ENDPOINT", "").rstrip("/")
 if not RAW_ENDPOINT:
-    RAW_ENDPOINT = "https://<your-resource>.cognitiveservices.azure.com"
+    RAW_ENDPOINT = "https://bing-search-labor.cognitiveservices.azure.com"
 
 SEARCH_URL = f"{RAW_ENDPOINT}/bing/v7.0/search"
 
