@@ -12,9 +12,9 @@ import json # json 모듈을 임포트합니다.
 BING_API_KEY = os.getenv("BING_API_KEY")
 
 # Bing Search API 엔드포인트를 설정합니다.
-# 이 값은 Azure Portal의 Bing Search 리소스 '키 및 엔드포인트' 섹션에서 확인한
-# 정확한 기본 엔드포인트 URL이어야 합니다.
-# 예: "https://YOUR_RESOURCE_NAME.cognitiveservices.azure.com"
+# 사용자님의 리소스 API Kind가 'CognitiveServices'이므로,
+# 이 엔드포인트는 통합 서비스의 기본 엔드포인트입니다.
+# Bing Search API 호출을 위해서는 뒤에 특정 경로를 추가해야 합니다.
 BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://bing-search-labor.cognitiveservices.azure.com")
 
 # ────────────────────────────────
@@ -30,10 +30,10 @@ def bing_search(query: str, top_n: int = 3):
         print(f"BING_API_KEY is loaded (first 5 chars): {BING_API_KEY[:5]}*****")
 
 
-    # JSON 파싱 오류는 서버 응답이 유효한 JSON이 아닐 때 발생합니다.
-    # 이는 주로 URL 경로가 잘못되었거나, API 키 문제로 인해 유효하지 않은 응답이 올 때 발생합니다.
-    # Azure Portal 엔드포인트 뒤에 가장 일반적인 Bing Web Search API v7 경로인 '/v7.0/search'를 붙여 시도합니다.
-    url = f"{BING_ENDPOINT.rstrip('/')}/v7.0/search"
+    # API Kind가 'CognitiveServices'인 경우, Bing Search API의 표준 경로는
+    # 기본 엔드포인트 뒤에 '/bing/v7.0/search'를 붙이는 형태입니다.
+    # rstrip('/')을 사용하여 엔드포인트 끝의 슬래시 중복을 방지합니다.
+    url = f"{BING_ENDPOINT.rstrip('/')}/bing/v7.0/search" # <-- 이 부분을 다시 수정했습니다.
     
     # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
     # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
@@ -51,9 +51,8 @@ def bing_search(query: str, top_n: int = 3):
             data = resp.json().get("webPages", {}).get("value", [])
         except json.JSONDecodeError as e:
             st.error(f"JSON 파싱 오류: {e}. 서버 응답이 유효한 JSON이 아닙니다.")
-            # 서버가 보낸 원본 응답 텍스트를 Streamlit 앱 화면에 직접 출력합니다.
-            st.code(resp.text, language='text', help="Raw API Response Text (JSON Decode Error)")
-            print(f"Raw API Response Text (JSON Decode Error): {resp.text}") # 콘솔에도 출력
+            # 서버가 보낸 원본 응답 텍스트를 콘솔에 출력합니다.
+            print(f"Raw API Response Text (JSON Decode Error): {resp.text}")
             return []
             
         return [
@@ -66,9 +65,8 @@ def bing_search(query: str, top_n: int = 3):
         ]
     except requests.exceptions.HTTPError as e:
         st.error(f"HTTP 오류 발생: {e.response.status_code} - {e.response.text}")
-        # 응답 본문을 Streamlit 앱 화면에 직접 출력합니다.
-        st.code(e.response.text, language='text', help="HTTP Error Response Body")
-        print(f"HTTP Error Response Body: {e.response.text}") # 콘솔에도 출력
+        # 응답 본문을 콘솔에 출력합니다.
+        print(f"HTTP Error Response Body: {e.response.text}")
         return []
     except requests.exceptions.ConnectionError as e:
         st.error(f"네트워크 연결 오류: Bing API 서버에 연결할 수 없습니다. 엔드포인트나 인터넷 연결을 확인해주세요. ({e})")
@@ -78,10 +76,9 @@ def bing_search(query: str, top_n: int = 3):
         return []
     except requests.exceptions.RequestException as e:
         st.error(f"요청 중 알 수 없는 오류 발생: {e}")
-        # RequestException 발생 시에도 응답 텍스트를 Streamlit 앱 화면에 출력합니다.
+        # RequestException 발생 시에도 응답 텍스트를 콘솔에 출력합니다.
         if resp: # resp 객체가 존재할 경우에만 text 속성에 접근
-            st.code(resp.text, language='text', help="Raw API Response Text (Request Exception)")
-            print(f"Raw API Response Text (Request Exception): {resp.text}") # 콘솔에도 출력
+            print(f"Raw API Response Text (Request Exception): {resp.text}")
         return []
     except Exception as e:
         st.error(f"Bing 검색 중 예기치 않은 오류 발생: {e}")
