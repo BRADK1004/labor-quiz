@@ -24,12 +24,10 @@ def bing_search(query: str, top_n: int = 3):
         st.error("오류: BING_API_KEY가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
         return []
 
-    # Bing Search API의 정확한 URL 경로를 확인합니다.
-    # Azure Bing Search 리소스의 경우, 엔드포인트 뒤에 '/bing/v7.0/search'가 붙는 경우가 많습니다.
-    # 일반 Bing Web Search API의 경우, 엔드포인트 뒤에 '/v7.0/search'가 붙습니다.
-    # 현재 코드는 BING_ENDPOINT에 '/bing/v7.0/search'를 추가하는 형태이므로,
-    # BING_ENDPOINT가 'https://YOUR_RESOURCE_NAME.cognitiveservices.azure.com' 형태라면 올바른 구성입니다.
-    url = f"{BING_ENDPOINT}/bing/v7.0/search"
+    # HTTP 404 오류는 주로 URL 경로 문제로 발생합니다.
+    # Azure Bing Search 리소스의 경우, 엔드포인트 뒤에 '/v7.0/search'만 붙는 경우가 많습니다.
+    # 기존 'bing/v7.0/search'에서 '/bing'을 제거하여 시도해봅니다.
+    url = f"{BING_ENDPOINT}/v7.0/search" # <-- 이 부분을 수정했습니다.
     
     headers = {"Ocp-Apim-Subscription-Key": BING_API_KEY}
     params  = {"q": query, "count": top_n, "textFormat": "Raw"}
