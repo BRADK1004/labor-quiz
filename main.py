@@ -3,6 +3,7 @@ import os
 import re
 import requests
 from docx import Document
+import json # json 모듈을 임포트합니다.
 
 # ────────────────────────────────
 # Azure Bing Search API 키 및 엔드포인트 (Secrets에 등록)
@@ -26,7 +27,7 @@ def bing_search(query: str, top_n: int = 3):
     # HTTP 404 오류가 계속 발생하는 가장 유력한 원인은
     # Azure Portal의 '엔드포인트' 값이 이미 완전한 API 호출 URL일 가능성입니다.
     # 따라서 BING_ENDPOINT 뒤에 추가 경로를 붙이지 않고 바로 사용합니다.
-    url = BING_ENDPOINT # <-- 이 부분을 수정했습니다.
+    url = BING_ENDPOINT # 현재 엔드포인트를 직접 사용하도록 설정
     
     # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
     # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
@@ -39,7 +40,15 @@ def bing_search(query: str, top_n: int = 3):
         resp = requests.get(url, headers=headers, params=params, timeout=10)
         resp.raise_for_status() # HTTP 에러 발생 시 예외를 발생시킵니다.
 
-        data = resp.json().get("webPages", {}).get("value", [])
+        # JSONDecodeError를 명시적으로 처리하기 위해 try-except 블록 추가
+        try:
+            data = resp.json().get("webPages", {}).get("value", [])
+        except json.JSONDecodeError as e:
+            st.error(f"JSON 파싱 오류: {e}. 서버 응답이 유효한 JSON이 아닙니다.")
+            # 서버가 보낸 원본 응답 텍스트를 출력하여 확인합니다.
+            print(f"Raw API Response Text (JSON Decode Error): {resp.text}")
+            return []
+            
         return [
             {
                 "name": item["name"],
@@ -50,8 +59,7 @@ def bing_search(query: str, top_n: int = 3):
         ]
     except requests.exceptions.HTTPError as e:
         st.error(f"HTTP 오류 발생: {e.response.status_code} - {e.response.text}")
-        # 중요: 응답 본문을 출력하여 서버가 제공하는 자세한 오류 내용을 확인합니다.
-        # 이 정보가 404 오류의 정확한 원인을 파악하는 데 도움이 될 수 있습니다.
+        # 응답 본문을 출력하여 서버가 제공하는 자세한 오류 내용을 확인합니다.
         print(f"HTTP Error Response Body: {e.response.text}")
         return []
     except requests.exceptions.ConnectionError as e:
@@ -62,6 +70,9 @@ def bing_search(query: str, top_n: int = 3):
         return []
     except requests.exceptions.RequestException as e:
         st.error(f"요청 중 알 수 없는 오류 발생: {e}")
+        # RequestException 발생 시에도 응답 텍스트를 확인합니다.
+        if resp: # resp 객체가 존재할 경우에만 text 속성에 접근
+            print(f"Raw API Response Text (Request Exception): {resp.text}")
         return []
     except Exception as e:
         st.error(f"Bing 검색 중 예기치 않은 오류 발생: {e}")
@@ -98,7 +109,7 @@ def load_questions_from_docx(path: str):
 # Streamlit UI
 
 def main():
-    st.set_page_config(page_title="노무사 기출 (Bing)", page_icon=" ")
+    st.set_page_config(page_title="노무사 기출 (Bing)", page_icon="🧠")
     st.title("🧠 공인노무사 기출문제 퀴즈 (Bing AI 검색)")
 
     up_file = st.file_uploader("Word .docx 기출 파일 업로드", type="docx")
@@ -145,4 +156,3 @@ def main():
 
 if __name__ == "__main__":
     main()
- 
