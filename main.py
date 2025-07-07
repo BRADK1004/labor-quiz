@@ -23,13 +23,10 @@ def bing_search(query: str, top_n: int = 3):
         st.error("오류: BING_API_KEY가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
         return []
 
-    # HTTP 404 오류는 요청 URL 경로가 잘못되었을 때 발생합니다.
-    # BING_ENDPOINT의 마지막 슬래시를 제거하여 중복 슬래시를 방지하고,
-    # 가장 일반적인 Bing Web Search API v7 경로인 '/v7.0/search'를 붙여 시도합니다.
-    # 만약 Azure Portal의 엔드포인트가 이미 '/v7.0/search'를 포함한다면,
-    # url = BING_ENDPOINT.rstrip('/') 또는 url = BING_ENDPOINT 로 설정해야 할 수도 있습니다.
-    # 사용하시는 리소스가 Bing Custom Search API라면 엔드포인트 구조가 다를 수 있습니다.
-    url = f"{BING_ENDPOINT.rstrip('/')}/v7.0/search" # <-- 이 부분을 다시 수정했습니다.
+    # HTTP 404 오류가 계속 발생하는 가장 유력한 원인은
+    # Azure Portal의 '엔드포인트' 값이 이미 완전한 API 호출 URL일 가능성입니다.
+    # 따라서 BING_ENDPOINT 뒤에 추가 경로를 붙이지 않고 바로 사용합니다.
+    url = BING_ENDPOINT # <-- 이 부분을 수정했습니다.
     
     # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
     # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
@@ -101,8 +98,8 @@ def load_questions_from_docx(path: str):
 # Streamlit UI
 
 def main():
-    st.set_page_config(page_title="노무사 기출 (Bing)", page_icon="🧠")
-    st.title("  공인노무사 기출문제 퀴즈 (Bing AI 검색)")
+    st.set_page_config(page_title="노무사 기출 (Bing)", page_icon=" ")
+    st.title("🧠 공인노무사 기출문제 퀴즈 (Bing AI 검색)")
 
     up_file = st.file_uploader("Word .docx 기출 파일 업로드", type="docx")
     if not up_file:
