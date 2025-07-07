@@ -22,12 +22,18 @@ BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://bing-search-labor.cognitives
 def bing_search(query: str, top_n: int = 3):
     if not BING_API_KEY:
         st.error("오류: BING_API_KEY가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
+        # BING_API_KEY가 로드되지 않았을 경우 로그에 출력하여 확인합니다.
+        print("BING_API_KEY is None. Please check your Streamlit Secrets or environment variables.")
         return []
+    else:
+        # BING_API_KEY가 로드되었음을 로그에 출력합니다. (보안을 위해 일부만 표시)
+        print(f"BING_API_KEY is loaded (first 5 chars): {BING_API_KEY[:5]}*****")
+
 
     # JSON 파싱 오류는 서버 응답이 유효한 JSON이 아닐 때 발생합니다.
     # 이는 주로 URL 경로가 잘못되었거나, API 키 문제로 인해 유효하지 않은 응답이 올 때 발생합니다.
     # Azure Portal 엔드포인트 뒤에 가장 일반적인 Bing Web Search API v7 경로인 '/v7.0/search'를 붙여 시도합니다.
-    url = f"{BING_ENDPOINT.rstrip('/')}/v7.0/search" # <-- 이 부분을 다시 수정했습니다.
+    url = f"{BING_ENDPOINT.rstrip('/')}/v7.0/search"
     
     # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
     # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
