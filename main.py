@@ -14,7 +14,7 @@ BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://bing-search-labor.cognitives
 def bing_search(query: str, top_n: int = 3):
     if not BING_API_KEY:
         return []
-    url = f"{BING_ENDPOINT}/v7.0/search"   # ← 여기 경로 수정
+    url = f"{BING_ENDPOINT}/bing/v7.0/search"  # ← 여기 경로 수정
     headers = {"Ocp-Apim-Subscription-Key": BING_API_KEY}
     params  = {"q": query, "count": top_n, "textFormat": "Raw"}
     resp = requests.get(url, headers=headers, params=params, timeout=10)
