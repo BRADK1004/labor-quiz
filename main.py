@@ -13,7 +13,6 @@ BING_API_KEY = os.getenv("BING_API_KEY")
 # Bing Search API 엔드포인트를 설정합니다.
 # 일반적으로 Azure Bing Search 리소스의 엔드포인트는 다음과 같은 형태입니다:
 # "https://YOUR_RESOURCE_NAME.cognitiveservices.azure.com"
-# 또는 일반 Bing Web Search API의 경우 "https://api.bing.microsoft.com"
 # 사용하시는 Bing Search API의 정확한 엔드포인트를 확인하여 설정해주세요.
 BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://bing-search-labor.cognitiveservices.azure.com")
 
@@ -25,9 +24,10 @@ def bing_search(query: str, top_n: int = 3):
         return []
 
     # HTTP 404 오류는 주로 URL 경로 문제로 발생합니다.
-    # Azure Bing Search 리소스의 경우, 엔드포인트 뒤에 '/v7.0/search'만 붙는 경우가 많습니다.
-    # 이전에 '/bing'을 제거하는 수정을 했으며, 이 버전이 Azure Bing Search의 일반적인 경로입니다.
-    url = f"{BING_ENDPOINT}/v7.0/search"
+    # BING_ENDPOINT의 마지막 슬래시를 제거하여 중복 슬래시를 방지하고,
+    # 초기 코드에서 사용했던 '/bing/v7.0/search' 경로를 다시 시도합니다.
+    # 일부 Azure Bing Search 리소스는 이 '/bing' 경로를 필요로 할 수 있습니다.
+    url = f"{BING_ENDPOINT.rstrip('/')}/bing/v7.0/search" # <-- 이 부분을 수정했습니다.
     
     # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
     # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
