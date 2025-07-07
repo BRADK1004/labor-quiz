@@ -11,9 +11,9 @@ from docx import Document
 BING_API_KEY = os.getenv("BING_API_KEY")
 
 # Bing Search API 엔드포인트를 설정합니다.
-# 일반적으로 Azure Bing Search 리소스의 엔드포인트는 다음과 같은 형태입니다:
-# "https://YOUR_RESOURCE_NAME.cognitiveservices.azure.com"
-# 사용하시는 Bing Search API의 정확한 엔드포인트를 확인하여 설정해주세요.
+# 이 값은 Azure Portal의 Bing Search 리소스 '키 및 엔드포인트' 섹션에서 확인한
+# 정확한 기본 엔드포인트 URL이어야 합니다.
+# 예: "https://YOUR_RESOURCE_NAME.cognitiveservices.azure.com"
 BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://bing-search-labor.cognitiveservices.azure.com")
 
 # ────────────────────────────────
@@ -23,11 +23,13 @@ def bing_search(query: str, top_n: int = 3):
         st.error("오류: BING_API_KEY가 설정되지 않았습니다. Streamlit Secrets 또는 환경 변수를 확인해주세요.")
         return []
 
-    # HTTP 404 오류는 주로 URL 경로 문제로 발생합니다.
+    # HTTP 404 오류는 요청 URL 경로가 잘못되었을 때 발생합니다.
     # BING_ENDPOINT의 마지막 슬래시를 제거하여 중복 슬래시를 방지하고,
-    # 초기 코드에서 사용했던 '/bing/v7.0/search' 경로를 다시 시도합니다.
-    # 일부 Azure Bing Search 리소스는 이 '/bing' 경로를 필요로 할 수 있습니다.
-    url = f"{BING_ENDPOINT.rstrip('/')}/bing/v7.0/search" # <-- 이 부분을 수정했습니다.
+    # 가장 일반적인 Bing Web Search API v7 경로인 '/v7.0/search'를 붙여 시도합니다.
+    # 만약 Azure Portal의 엔드포인트가 이미 '/v7.0/search'를 포함한다면,
+    # url = BING_ENDPOINT.rstrip('/') 또는 url = BING_ENDPOINT 로 설정해야 할 수도 있습니다.
+    # 사용하시는 리소스가 Bing Custom Search API라면 엔드포인트 구조가 다를 수 있습니다.
+    url = f"{BING_ENDPOINT.rstrip('/')}/v7.0/search" # <-- 이 부분을 다시 수정했습니다.
     
     # 디버깅을 위해 생성된 URL을 콘솔에 출력합니다.
     # Streamlit 앱이 배포된 환경에서는 로그를 통해 확인 가능합니다.
@@ -51,7 +53,8 @@ def bing_search(query: str, top_n: int = 3):
         ]
     except requests.exceptions.HTTPError as e:
         st.error(f"HTTP 오류 발생: {e.response.status_code} - {e.response.text}")
-        # 추가 디버깅 정보: 응답 본문을 출력하여 서버가 제공하는 자세한 오류 내용을 확인합니다.
+        # 중요: 응답 본문을 출력하여 서버가 제공하는 자세한 오류 내용을 확인합니다.
+        # 이 정보가 404 오류의 정확한 원인을 파악하는 데 도움이 될 수 있습니다.
         print(f"HTTP Error Response Body: {e.response.text}")
         return []
     except requests.exceptions.ConnectionError as e:
@@ -99,7 +102,7 @@ def load_questions_from_docx(path: str):
 
 def main():
     st.set_page_config(page_title="노무사 기출 (Bing)", page_icon="🧠")
-    st.title("🧠 공인노무사 기출문제 퀴즈 (Bing AI 검색)")
+    st.title("  공인노무사 기출문제 퀴즈 (Bing AI 검색)")
 
     up_file = st.file_uploader("Word .docx 기출 파일 업로드", type="docx")
     if not up_file:
@@ -145,3 +148,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+ 
