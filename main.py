@@ -51,9 +51,9 @@ def bing_search(query: str, top_n: int = 3):
             data = resp.json().get("webPages", {}).get("value", [])
         except json.JSONDecodeError as e:
             st.error(f"JSON 파싱 오류: {e}. 서버 응답이 유효한 JSON이 아닙니다.")
-            # 서버가 보낸 원본 응답 텍스트를 출력하여 확인합니다.
-            # 이 텍스트가 비어있거나, HTML 오류 페이지라면 문제의 원인을 파악하는 데 결정적입니다.
-            print(f"Raw API Response Text (JSON Decode Error): {resp.text}")
+            # 서버가 보낸 원본 응답 텍스트를 Streamlit 앱 화면에 직접 출력합니다.
+            st.code(resp.text, language='text', help="Raw API Response Text (JSON Decode Error)")
+            print(f"Raw API Response Text (JSON Decode Error): {resp.text}") # 콘솔에도 출력
             return []
             
         return [
@@ -66,8 +66,9 @@ def bing_search(query: str, top_n: int = 3):
         ]
     except requests.exceptions.HTTPError as e:
         st.error(f"HTTP 오류 발생: {e.response.status_code} - {e.response.text}")
-        # 응답 본문을 출력하여 서버가 제공하는 자세한 오류 내용을 확인합니다.
-        print(f"HTTP Error Response Body: {e.response.text}")
+        # 응답 본문을 Streamlit 앱 화면에 직접 출력합니다.
+        st.code(e.response.text, language='text', help="HTTP Error Response Body")
+        print(f"HTTP Error Response Body: {e.response.text}") # 콘솔에도 출력
         return []
     except requests.exceptions.ConnectionError as e:
         st.error(f"네트워크 연결 오류: Bing API 서버에 연결할 수 없습니다. 엔드포인트나 인터넷 연결을 확인해주세요. ({e})")
@@ -77,9 +78,10 @@ def bing_search(query: str, top_n: int = 3):
         return []
     except requests.exceptions.RequestException as e:
         st.error(f"요청 중 알 수 없는 오류 발생: {e}")
-        # RequestException 발생 시에도 응답 텍스트를 확인합니다.
+        # RequestException 발생 시에도 응답 텍스트를 Streamlit 앱 화면에 출력합니다.
         if resp: # resp 객체가 존재할 경우에만 text 속성에 접근
-            print(f"Raw API Response Text (Request Exception): {resp.text}")
+            st.code(resp.text, language='text', help="Raw API Response Text (Request Exception)")
+            print(f"Raw API Response Text (Request Exception): {resp.text}") # 콘솔에도 출력
         return []
     except Exception as e:
         st.error(f"Bing 검색 중 예기치 않은 오류 발생: {e}")
