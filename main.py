@@ -12,7 +12,7 @@ from urllib.parse import quote
 #    ‑ (옵션) BING_ENDPOINT 기본값 그대로 두면 됨
 # ─────────────────────────────────────────────
 BING_API_KEY  = os.getenv("BING_API_KEY")
-BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://api.bing.microsoft.com")
+BING_ENDPOINT = os.getenv("BING_ENDPOINT", "https://bing-search-labor.cognitiveservices.azure.com/")
 
 # ─────────────────────────────────────────────
 # Bing 검색 함수 (최대 top_n개의 결과 반환)
